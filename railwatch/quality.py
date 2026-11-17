@@ -45,29 +45,7 @@ class Quality:
                 "retracted_claim_ids": retracted}
 
     def stale_reviews(self, project_key=None):
-        scopes = self.service.scopes(project_key)
-        rows = []
-        for scope in scopes:
-            selected = scope["selected"]
-            if not selected:
-                continue
-            claim = self.service.store.claim(selected["claim_id"])
-            capture = self.service.store.capture(claim["capture_id"])
-            policy = self.service.store.source(capture["source_id"])
-            reasons = []
-            if not policy["active"]:
-                reasons.append("source_disabled")
-            if capture["policy_version"] != policy["version"]:
-                reasons.append("policy_changed")
-            if capture["state"] != "parsed":
-                reasons.append("capture_not_current")
-            if claim["state"] != "accepted":
-                reasons.append("claim_not_accepted")
-            if reasons:
-                rows.append({"claim_id": claim["id"], "scope": self._scope_key(scope),
-                             "reasons": reasons, "policy_version": policy["version"],
-                             "capture_policy_version": capture["policy_version"]})
-        return rows
+        return self.service.stale_selections(project_key)
 
     def publication_readiness(self, project_key=None):
         scopes = self.service.scopes(project_key)

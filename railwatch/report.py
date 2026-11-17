@@ -92,7 +92,9 @@ class Reports:
                                      "claim_id": claim["claim_id"]})
             provenance.append({"claim_id": claim["claim_id"], "project_key": scope["project_key"],
                                "period": scope["period"], "source_id": claim["source_id"],
-                               "url": claim["url"], "quote": claim["quote"]})
+                               "url": claim["url"], "quote": claim["quote"],
+                               "policy_version": claim.get("policy_version"),
+                               "capture_policy_version": claim.get("capture_policy_version")})
         series = []
         for (project, kind, metric, unit), values in sorted(numeric.items()):
             values.sort(key=lambda value: value["period"])

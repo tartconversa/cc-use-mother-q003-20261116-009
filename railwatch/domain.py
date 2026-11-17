@@ -90,6 +90,54 @@ def amount(value):
     return format(result.normalize(), "f")
 
 
+def claims_equivalent(first, second):
+    """铁路新闻证据系统：Two claim rows state the same metric value."""
+    if first["kind"] == "milestone":
+        return first["milestone"] == second["milestone"]
+    return first["unit"] == second["unit"] and Decimal(first["amount"]) == Decimal(second["amount"])
+
+
+def select_evidence(candidates):
+    """铁路新闻证据系统：Pick the winning claim among accepted candidates.
+
+    Candidates are mappings with id, kind, amount, unit, milestone and trust_rank.
+    Returns (selected_claim_id, conflict); conflicting value groups select nothing.
+    """
+    if not candidates:
+        return None, False
+    groups = []
+    for candidate in candidates:
+        group = next((g for g in groups if claims_equivalent(g[0], candidate)), None)
+        if group is None:
+            groups.append([candidate])
+        else:
+            group.append(candidate)
+    if len(groups) > 1:
+        return None, True
+    selected = sorted(groups[0], key=lambda c: (-c["trust_rank"], c["id"]))[0]
+    return selected["id"], False
+
+
+def evidence_issues(policy, capture, claim=None):
+    """铁路新闻证据系统：Reasons stored evidence no longer satisfies a source policy.
+
+    policy is a mapping with active, host, kinds and max_age_days; capture is a
+    mapping with url, fetched_at and published_at; claim (optional) carries kind.
+    """
+    reasons = []
+    if not policy["active"]:
+        reasons.append("source_disabled")
+    if urlsplit(capture["url"]).hostname != policy["host"]:
+        reasons.append("host_changed")
+    fetched = datetime.fromisoformat(capture["fetched_at"])
+    published = datetime.fromisoformat(capture["published_at"])
+    if (fetched - published).days > policy["max_age_days"]:
+        reasons.append("stale_capture")
+    if claim is not None and claim["kind"] not in policy["kinds"]:
+        reasons.append("kind_not_allowed")
+    return reasons
+
+
 @dataclass(frozen=True)
 class SourcePolicy:
     source_id: str
